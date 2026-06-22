@@ -26,7 +26,7 @@ public class SecurityConfig {
                         .defaultSuccessUrl("/profil", true)
                 )
                 .logout(logout -> logout.logoutSuccessUrl("/"))
-                .cors(cors -> cors.configurationSource(disableCorsConfigurationSource()));;
+                .cors(cors -> cors.configurationSource(disableCorsConfigurationSource()));
 
         return http.build();
     }
