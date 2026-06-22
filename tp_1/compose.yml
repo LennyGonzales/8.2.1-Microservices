@@ -15,8 +15,8 @@ services:
       context: ./back
       dockerfile: Dockerfile
     environment:
-      # Depuis le conteneur back, Keycloak est joignable via le nom de service Docker
-      KEYCLOAK_ISSUER_URI: http://keycloak:8080/realms/microservices-realm
+      KEYCLOAK_ISSUER_URI: http://localhost:8180/realms/microservices-realm
+      KEYCLOAK_JWK_SET_URI: http://keycloak:8080/realms/microservices-realm/protocol/openid-connect/certs
     ports:
       - 8080:8080
     networks:
@@ -36,8 +36,6 @@ services:
     volumes:
       - ./keycloak:/opt/keycloak/data/import
     healthcheck:
-      # curl et wget sont absents de l'image Keycloak 26.
-      # On vérifie que le port 8080 (0x1F90) est en état LISTEN via /proc/net/tcp6.
       test: ["CMD-SHELL", "grep -q '1F90' /proc/net/tcp6 && grep -qr 'microservices-realm' /opt/keycloak/data/import"]
       interval: 10s
       timeout: 5s

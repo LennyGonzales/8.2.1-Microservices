@@ -122,9 +122,10 @@ async function getAuthHeaders() {
     await keycloak.updateToken(30);
   } catch {
     // Token expiré et refresh impossible → forcer reconnexion
-    keycloak.login();
+    await keycloak.login();
     return {};
   }
+
   return {
     'Authorization': 'Bearer ' + keycloak.token,
     'Accept': 'application/json'
@@ -136,7 +137,7 @@ async function fetchVols() {
   try {
     const response = await fetch(VOL_URL, {
       method: 'GET',
-      headers: { Accept: 'application/json' }
+      headers: await getAuthHeaders()
     });
 
     if (!response.ok) {

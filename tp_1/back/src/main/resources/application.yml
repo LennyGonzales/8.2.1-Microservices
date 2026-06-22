@@ -6,9 +6,8 @@ spring:
     oauth2:
       resourceserver:
         jwt:
-          # Depuis le conteneur Docker, Keycloak est accessible via son nom de service.
-          # En développement local (hors Docker), remplacer par http://localhost:8180/realms/microservices-realm
           issuer-uri: ${KEYCLOAK_ISSUER_URI:http://localhost:8180/realms/microservices-realm}
+          jwk-set-uri: ${KEYCLOAK_JWK_SET_URI:http://localhost:8180/realms/microservices-realm/protocol/openid-connect/certs}
 
 server:
   servlet:
