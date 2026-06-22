@@ -154,6 +154,7 @@ function renderProfile(profile) {
     avatar.className = 'profile-avatar';
     avatar.src = picture;
     avatar.alt = 'Photo de profil';
+    avatar.referrerPolicy = 'no-referrer';
     profileEl.append(avatar);
   }
 
