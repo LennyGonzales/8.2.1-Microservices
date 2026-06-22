@@ -2,64 +2,11 @@
 
 Architecture microservices à trois tiers : frontend statique, API REST Spring Boot, et serveur d'autorisation Keycloak.
 
----
-
-## Migration de l'IdP : Google → Keycloak
-
-Dans un premier temps, l'application utilisait **Google** comme Identity Provider via Spring Security OAuth2 Client (`spring-boot-starter-oauth2-client`). Le backend gérait une session HTTP côté serveur, l'utilisateur se connectait via "Se connecter avec Google", et le profil était récupéré depuis l'objet `OidcUser` de Google.
-
-Cette approche a été **remplacée intégralement par Keycloak** pour les raisons suivantes :
-- Keycloak est auto-hébergé : aucune dépendance à un service tiers externe
-- Il permet de gérer les utilisateurs, les rôles et les clients en interne
-- Il sert à la fois l'authentification du frontend **et** l'autorisation de l'API (deux clients distincts)
-
-**Changements opérés lors de la migration :**
-
-| Élément | Avant (Google) | Après (Keycloak) |
-|---|---|---|
-| Dépendance Maven | `oauth2-client` | `oauth2-resource-server` |
-| Mode session backend | Stateful (session HTTP) | Stateless (JWT Bearer) |
-| Principal Spring | `OidcUser` (Google) | `Jwt` (Keycloak) |
-| Auth frontend | Lien redirect Google | `keycloak-js` (Authorization Code + PKCE) |
-| Config `application.yml` | `clientId` / `clientSecret` Google | `issuer-uri` Keycloak |
-| Credentials | `GOOGLE_CLIENT_ID/SECRET` | `KEYCLOAK_ISSUER_URI` |
-
----
-
-## Architecture
-
-```
-Navigateur (localhost:3000)
-    │  keycloak-js (OIDC Authorization Code + PKCE)
-    ▼
-Keycloak (localhost:8180)          ← Identity Provider (OpenID Connect)
-    │  JWT (access token)
-    ▼
-Frontend nginx (localhost:3000)
-    │  Authorization: Bearer <JWT>
-    ▼
-API REST Spring Boot (localhost:8080)  ← Resource Server (valide le JWT)
-```
-
----
-
-## Services
-
-| Service | Technologie | Port | Rôle |
-|---|---|---|---|
-| `front` | nginx + HTML/JS vanilla | 3000 | SPA statique, auth via Keycloak JS |
-| `back` | Spring Boot 4.1 / Java 21 | 8080 | API REST sécurisée par JWT |
-| `keycloak` | Keycloak 26.x | 8180 | Serveur OpenID Connect (Auth + Token) |
-
----
 
 ## Démarrage rapide
 
 ```bash
-# Copier et remplir les variables d'environnement
 cp .env.example .env
-
-# Lancer toute la stack
 docker compose up --build
 ```
 
@@ -71,13 +18,61 @@ Le backend attend que Keycloak soit `healthy` avant de démarrer (`depends_on: c
 
 ## Tâches réalisées
 
-### Tâche 1–3 — API REST de base
+### Tâche 1 — API REST de base
 
-- API Spring Boot exposant deux endpoints :
-  - `GET /api/vol` — liste de vols (public)
-  - `GET /api/profil` — profil de l'utilisateur connecté (protégé)
-- Modèle `Vol` : `compagnieAerienne`, `numeroVol`, `place`, `prix`, `date`
-- Frontend HTML/JS affichant les vols dans un tableau et le profil utilisateur
+Projet Maven Spring Boot généré avec l'archétype `maven-archetype-webapp`, groupId `infres.ws.rest`, artifactId `java-rest-server`.
+
+**1b — Hiérarchie de ressources REST**
+
+```
+/api
+└── /vol          GET → liste des vols disponibles
+    └── /{id}     (extensible par compagnie, numéro, place, date)
+```
+
+**1c/1d — Ressource `Vol` en JSON**
+
+Modèle Java (`Vol.java`) exposé en JSON via Jackson :
+
+```java
+record Vol(String compagnieAerienne, String numeroVol, String place, double prix, String date)
+```
+
+`GET /api/vol` retourne une liste statique de 3 vols (pas de base de données). La consigne demandait initialement du XML/JAXB — on utilise directement JSON (Spring Boot sérialise via Jackson par défaut, ce qui correspond à la demande 1d).
+
+---
+
+### Tâche 2 — Application JavaScript
+
+Frontend HTML/JS vanilla servi par nginx (port 3000).
+
+- Bouton "Récupérer les vols" → `GET /api/vol` → affichage en tableau (compagnie, n° vol, place, date, prix)
+- Section profil : affiche le nom et l'email de l'utilisateur connecté
+- Aucun framework, aucune dépendance npm côté frontend applicatif
+
+---
+
+### Tâche 3 — Délégation OAuth 2.0 auprès de Google (remplacé par Keycloak)
+
+**3a — Inscription auprès de Google**
+
+Un projet Google Cloud a été créé, l'API Google+ activée, et des credentials OAuth 2.0 récupérés (`client_id` + `client_secret`). L'URL de redirection `http://localhost:8080/api/login/oauth2/code/google` a été déclarée.
+
+**3b/3c — Intégration Spring Security OAuth2 Client**
+
+Dépendance `spring-boot-starter-oauth2-client`. Spring Security gère automatiquement le flow Authorization Code. Le profil était récupéré depuis l'objet `OidcUser` (claims Google : `name`, `email`, `picture`) et renvoyé par `GET /api/profil`.
+
+**Migration vers Keycloak (tâches 4 & 5)**
+
+Google a été **remplacé intégralement par Keycloak** (auto-hébergé, gestion interne des utilisateurs). Voir le tableau de migration ci-dessous.
+
+| Élément | Avant (Google) | Après (Keycloak) |
+|---|---|---|
+| Dépendance Maven | `oauth2-client` | `oauth2-resource-server` |
+| Mode session backend | Stateful (session HTTP) | Stateless (JWT Bearer) |
+| Principal Spring | `OidcUser` | `Jwt` |
+| Auth frontend | Lien redirect Google | `keycloak-js` (Authorization Code + PKCE) |
+| Config `application.yml` | `clientId` / `clientSecret` Google | `issuer-uri` Keycloak |
 
 ---
 
@@ -95,7 +90,7 @@ Déclaré dans `keycloak/realm-export.json` :
 
 **4c — Configuration du backend comme Resource Server**
 
-Dépendance Maven : `spring-boot-starter-oauth2-resource-server` (standard Spring Security, pas d'adapter Keycloak propriétaire).
+Dépendance Maven : `spring-boot-starter-oauth2-resource-server` (standard Spring Security, pas d'adapter Keycloak propriétaire — les adapters Keycloak sont dépréciés).
 
 `application.yml` :
 ```yaml
@@ -103,25 +98,20 @@ spring.security.oauth2.resourceserver.jwt.issuer-uri:
   ${KEYCLOAK_ISSUER_URI:http://localhost:8180/realms/microservices-realm}
 ```
 
-`SecurityConfig.java` — points clés :
-- Session `STATELESS` (API REST pure, pas de cookie de session)
+`SecurityConfig.java` :
+- Session `STATELESS`
 - `oauth2ResourceServer(jwt -> {})` : chaque requête doit porter un Bearer JWT valide signé par Keycloak
 - CSRF désactivé
-- CORS : origine `http://localhost:3000` autorisée, `allowCredentials: false`
+- CORS : origine `http://localhost:3000` autorisée
 
-`ProfilController.java` : reçoit `@AuthenticationPrincipal Jwt`, extrait les claims `name`, `preferred_username`, `email`.
+`ProfilController.java` : `@AuthenticationPrincipal Jwt` → claims `name`, `preferred_username`, `email`.
 
 **4d — Validation**
 
 ```bash
-# Sans token → 401
-curl -i http://localhost:8080/api/profil
-
-# Avec token → 200
-curl -H "Authorization: Bearer <token>" http://localhost:8080/api/profil
-
-# Endpoint public → 200 sans token
-curl http://localhost:8080/api/vol
+curl -i http://localhost:8080/api/profil                              # → 401 sans token
+curl -H "Authorization: Bearer <token>" http://localhost:8080/api/profil  # → 200
+curl http://localhost:8080/api/vol                                    # → 200 (public)
 ```
 
 ---
@@ -136,15 +126,7 @@ Déclaré dans `keycloak/realm-export.json` :
 - `redirectUris: ["http://localhost:3000/*"]`
 - `webOrigins: ["http://localhost:3000"]`
 
-**5b — Intégration keycloak-js**
-
-La librairie `keycloak-js` est auto-hébergée dans `front/keycloak.js` (package npm `keycloak-js@26.2.4`, compatible Keycloak 26.x). Elle est servie par nginx sur la même origine que l'app pour éviter les erreurs CORS/ORB.
-
-`index.html` charge `app.js` en tant que module ES (`type="module"`).
-
-**5c — Flow d'authentification**
-
-`app.js` initialise Keycloak en mode `check-sso` (non-intrusif : pas de redirection forcée au chargement) avec PKCE S256 :
+**5c — Flow d'authentification et récupération du JWT**
 
 ```js
 const keycloak = new Keycloak({
@@ -155,10 +137,160 @@ const keycloak = new Keycloak({
 keycloak.init({ onLoad: 'check-sso', pkceMethod: 'S256' });
 ```
 
-- Si session SSO active → profil affiché depuis `keycloak.tokenParsed` (JWT décodé)
-- Clic "Se connecter" → `keycloak.login()` → redirection vers Keycloak → retour avec code → échange contre JWT
-- Appels à `/api/profil` → header `Authorization: Bearer <access_token>` (avec refresh auto si expiry < 30s)
-- `silent-check-sso.html` : page iframe pour la vérification SSO silencieuse
+- Clic "Se connecter" → `keycloak.login()` → redirection Keycloak → retour avec code d'autorisation → échange contre un **JWT access token**
+- `keycloak.tokenParsed` contient les claims JWT décodés (sub, name, email…) — ID utilisateur visible directement
+- Appels à `/api/profil` → header `Authorization: Bearer <access_token>` (refresh auto si expiry < 30s)
+
+---
+
+### Tâche 6 — Analyse du token JWT Keycloak
+
+**6a — Récupération du token**
+
+Après connexion, le token est accessible dans la console navigateur :
+```js
+// Dans la console du navigateur (après connexion)
+keycloak.token        // access token brut (JWT)
+keycloak.tokenParsed  // claims décodés (objet JS)
+```
+
+Ou via les DevTools → Onglet Réseau → requête vers `http://localhost:8180/realms/microservices-realm/protocol/openid-connect/token` → champ `access_token` dans la réponse JSON.
+
+**6b — Décodage sur jwt.io**
+
+En collant le token sur [https://jwt.io](https://jwt.io), on observe :
+
+- **Header** : 
+```json
+{
+  "alg": "HS512",
+  "typ": "JWT",
+  "kid": "3e283f18-d7bf-4c38-b6f2-209131e1e5e2"
+}
+```
+- **Payload**:
+```json
+{
+  "exp": 1782174794,
+  "iat": 1782138794,
+  "jti": "fc6fcfd7-0bfc-15fe-882d-401942ec1770",
+  "iss": "http://localhost:8180/realms/microservices-realm",
+  "sub": "66170568-9e2d-42cc-b552-a9eba180d090",
+  "typ": "Serialized-ID",
+  "sid": "fqCllbTeS37I7x-l008i_HPE",
+  "state_checker": "JvOSOgbjH-NSNVdT4o_nOT8-BNT-MVdJaG7RAJv2myo"
+}
+```
+- **Signature** : vérifiable avec la clé publique du realm (`http://localhost:8180/realms/microservices-realm`)
+
+---
+
+### Tâche 7 — Contrat d'API OpenAPI / Swagger
+
+**7a — Définition du contrat**
+
+Le contrat OpenAPI 3.0 de l'API est défini ci-dessous (à coller dans [https://editor.swagger.io](https://editor.swagger.io)) :
+
+```yaml
+openapi: 3.0.3
+info:
+  title: API Réservation de Vols
+  version: 1.0.0
+  description: Web service REST de réservation de vols sécurisé par Keycloak (JWT Bearer)
+
+servers:
+  - url: http://localhost:8080/api
+
+components:
+  securitySchemes:
+    bearerAuth:
+      type: http
+      scheme: bearer
+      bearerFormat: JWT
+
+  schemas:
+    Vol:
+      type: object
+      properties:
+        compagnieAerienne:
+          type: string
+          example: Air France
+        numeroVol:
+          type: string
+          example: AF123
+        place:
+          type: string
+          example: 12A
+        prix:
+          type: number
+          format: double
+          example: 350.0
+        date:
+          type: string
+          format: date
+          example: "2024-07-01"
+
+    Profil:
+      type: object
+      properties:
+        name:
+          type: string
+          example: Test User
+        email:
+          type: string
+          example: testuser@demo.local
+        picture:
+          type: string
+          example: ""
+
+paths:
+  /vol:
+    get:
+      summary: Liste des vols disponibles
+      description: Retourne la liste statique des vols. Endpoint public, aucune authentification requise.
+      responses:
+        "200":
+          description: Liste des vols
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/Vol'
+
+  /profil:
+    get:
+      summary: Profil de l'utilisateur connecté
+      description: Retourne les informations de l'utilisateur extraites du JWT Keycloak.
+      security:
+        - bearerAuth: []
+      responses:
+        "200":
+          description: Profil utilisateur
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Profil'
+        "401":
+          description: Token absent ou invalide
+```
+
+**7b — Génération depuis le contrat**
+
+Depuis [https://editor.swagger.io](https://editor.swagger.io) après avoir collé le contrat :
+
+- **Documentation HTML** : `Generate Client → html2` ou `Generate Server → html`
+- **Client JavaScript** : `Generate Client → javascript`
+- **Client Java** : `Generate Client → java`
+
+Ou via la CLI `openapi-generator` :
+```bash
+# Documentation HTML
+openapi-generator generate -i openapi.yaml -g html2 -o ./docs
+
+# Client JavaScript
+openapi-generator generate -i openapi.yaml -g javascript -o ./client-js
+```
 
 ---
 
@@ -173,10 +305,3 @@ keycloak.init({ onLoad: 'check-sso', pkceMethod: 'S256' });
 
 Console d'administration : [http://localhost:8180/admin](http://localhost:8180/admin)
 
----
-
-## Notes techniques
-
-- **Healthcheck Keycloak** : `curl` et `wget` sont absents de l'image Keycloak 26. Le healthcheck utilise `/proc/net/tcp6` (port 8080 = `1F90` en hex) — seul `grep` est nécessaire.
-- **keycloak-js** : depuis Keycloak 20+, `keycloak.js` n'existe plus comme fichier statique dans l'image Docker. Il faut l'auto-héberger depuis le package npm officiel.
-- **Pas d'adapter Keycloak propriétaire** : la configuration utilise uniquement les standards Spring Security OAuth2 et OIDC, conformément aux recommandations (les adapters Keycloak sont dépréciés).
