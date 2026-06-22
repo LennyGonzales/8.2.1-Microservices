@@ -1,0 +1,24 @@
+services:
+  front:
+    build:
+      context: ./front
+      dockerfile: Dockerfile
+    ports:
+      - 3000:80
+    volumes:
+      - ./front:/usr/share/nginx/html
+    networks:
+      - tp1-network
+
+  back:
+    build:
+      context: ./back
+      dockerfile: Dockerfile
+    ports:
+      - 8080:8080
+    networks:
+      - tp1-network
+
+networks:
+  tp1-network:
+    driver: bridge
