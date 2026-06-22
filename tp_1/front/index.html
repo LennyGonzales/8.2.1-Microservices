@@ -16,13 +16,20 @@
 
     <section class="auth-section" id="auth-section">
       <div id="profile" class="profile hidden"></div>
-      <a
-        id="btn-google-login"
-        class="btn-google"
-        href="http://localhost:8080/api/oauth2/authorization/google"
+      <button
+        id="btn-keycloak-login"
+        class="btn-google hidden"
+        type="button"
       >
-        Se connecter avec Google
-      </a>
+        Se connecter avec Keycloak
+      </button>
+      <button
+        id="btn-keycloak-logout"
+        class="btn-logout hidden"
+        type="button"
+      >
+        Se déconnecter
+      </button>
     </section>
 
     <div class="actions">
@@ -32,6 +39,7 @@
     <div id="flights-result"></div>
   </div>
 
-  <script src="app.js"></script>
+  <!-- app.js est un ES module et importe Keycloak depuis /keycloak.js -->
+  <script type="module" src="app.js"></script>
 </body>
 </html>

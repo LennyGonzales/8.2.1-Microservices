@@ -15,13 +15,16 @@ services:
       context: ./back
       dockerfile: Dockerfile
     environment:
-      GOOGLE_CLIENT_ID: ${GOOGLE_CLIENT_ID}
-      GOOGLE_CLIENT_SECRET: ${GOOGLE_CLIENT_SECRET}
+      # Depuis le conteneur back, Keycloak est joignable via le nom de service Docker
+      KEYCLOAK_ISSUER_URI: http://keycloak:8080/realms/microservices-realm
     ports:
       - 8080:8080
     networks:
       - tp1-network
-  
+    depends_on:
+      keycloak:
+        condition: service_healthy
+
   keycloak:
     image: quay.io/keycloak/keycloak:latest
     command: start-dev --import-realm
@@ -33,11 +36,15 @@ services:
     volumes:
       - ./keycloak:/opt/keycloak/data/import
     healthcheck:
-      test: ["CMD-SHELL", "curl -f http://localhost:8080/realms/demo-realm || exit 1"]
-      interval: 15s
+      # curl et wget sont absents de l'image Keycloak 26.
+      # On vérifie que le port 8080 (0x1F90) est en état LISTEN via /proc/net/tcp6.
+      test: ["CMD-SHELL", "grep -q '1F90' /proc/net/tcp6 && grep -qr 'microservices-realm' /opt/keycloak/data/import"]
+      interval: 10s
       timeout: 5s
-      retries: 10
-      start_period: 30s
+      retries: 15
+      start_period: 45s
+    networks:
+      - tp1-network
 
 networks:
   tp1-network:

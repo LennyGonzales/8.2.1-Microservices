@@ -1,0 +1,15 @@
+<!DOCTYPE html>
+<html>
+<head><title>Silent SSO check</title></head>
+<body>
+  <!--
+    Page utilisée par keycloak-js pour le "silent check-sso".
+    Elle doit être hébergée sur la même origine que l'application (localhost:3000).
+    Keycloak charge cette page dans une iframe cachée pour vérifier silencieusement
+    si une session SSO est active, sans rediriger l'utilisateur.
+  -->
+  <script type="module">
+    parent.postMessage(location.href, location.origin);
+  </script>
+</body>
+</html>
