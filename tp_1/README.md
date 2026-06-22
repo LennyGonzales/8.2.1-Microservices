@@ -163,22 +163,36 @@ En collant le token sur [https://jwt.io](https://jwt.io), on observe :
 - **Header** : 
 ```json
 {
-  "alg": "HS512",
+  "alg": "RS256",
   "typ": "JWT",
-  "kid": "3e283f18-d7bf-4c38-b6f2-209131e1e5e2"
+  "kid": "jZBuyprLsyqxK16QQo4iqlsg45OJ7C62miui-rdEdsE"
 }
 ```
 - **Payload**:
 ```json
 {
-  "exp": 1782174794,
-  "iat": 1782138794,
-  "jti": "fc6fcfd7-0bfc-15fe-882d-401942ec1770",
+  "exp": 1782139759,
+  "iat": 1782139459,
+  "jti": "onrtac:dcf60127-c11a-1d13-cff7-8c492bdd13ec",
   "iss": "http://localhost:8180/realms/microservices-realm",
-  "sub": "66170568-9e2d-42cc-b552-a9eba180d090",
-  "typ": "Serialized-ID",
-  "sid": "fqCllbTeS37I7x-l008i_HPE",
-  "state_checker": "JvOSOgbjH-NSNVdT4o_nOT8-BNT-MVdJaG7RAJv2myo"
+  "typ": "Bearer",
+  "azp": "web-app",
+  "sid": "q7Y8IQLk-8uJWuPcijrV6GeS",
+  "allowed-origins": [
+    "http://localhost:3000"
+  ],
+  "realm_access": {
+    "roles": [
+      "default-roles-demo-realm"
+    ]
+  },
+  "scope": "openid profile email",
+  "email_verified": true,
+  "name": "Test User",
+  "preferred_username": "testuser",
+  "given_name": "Test",
+  "family_name": "User",
+  "email": "testuser@demo.local"
 }
 ```
 - **Signature** : vérifiable avec la clé publique du realm (`http://localhost:8180/realms/microservices-realm`)
