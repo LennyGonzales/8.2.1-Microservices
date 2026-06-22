@@ -1,6 +1,6 @@
 const API_BASE = 'http://localhost:8080/api';
 const VOL_URL = API_BASE + '/vol';
-const PROFILE_URL = API_BASE + '/profile';
+const PROFILE_URL = API_BASE + '/profil';
 
 const btnFetch = document.getElementById('btn-fetch');
 const flightsResultEl = document.getElementById('flights-result');
