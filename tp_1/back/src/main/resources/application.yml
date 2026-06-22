@@ -1,0 +1,7 @@
+spring:
+  application:
+    name: cours-microservice
+
+server:
+  servlet:
+    contextPath: "/api"
