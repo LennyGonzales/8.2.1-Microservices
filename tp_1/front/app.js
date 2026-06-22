@@ -1,6 +1,6 @@
 const API_BASE = 'http://localhost:8080/api';
 const VOL_URL = API_BASE + '/vol';
-const PROFILE_URL = API_BASE + '/profil';
+const PROFIL_URL = API_BASE + '/profil';
 
 const btnFetch = document.getElementById('btn-fetch');
 const flightsResultEl = document.getElementById('flights-result');
@@ -174,7 +174,7 @@ function renderProfile(profile) {
 
 async function loadProfile() {
   try {
-    const response = await fetch(PROFILE_URL, fetchOptions);
+    const response = await fetch(PROFIL_URL, fetchOptions);
 
     if (response.status === 401 || response.status === 403) {
       showLoginButton();
