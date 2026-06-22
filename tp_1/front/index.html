@@ -2,15 +2,24 @@
 <html lang="fr">
 <head>
   <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>Réservation de vols</title>
+  <link rel="stylesheet" href="style.css">
 </head>
 <body>
-  <h1>Réservation de vols</h1>
+  <div class="container">
+    <header>
+      <div class="icon">✈</div>
+      <h1>Réservation de vols</h1>
+      <p class="subtitle">Consultez les vols disponibles</p>
+    </header>
 
-  <button type="button" id="btn-fetch">Récupérer les vols</button>
+    <div class="actions">
+      <button type="button" id="btn-fetch">Récupérer les vols</button>
+    </div>
 
-  <h2>Résultat</h2>
-  <pre id="result"></pre>
+    <div id="result"></div>
+  </div>
 
   <script src="app.js"></script>
 </body>
