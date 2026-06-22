@@ -2,7 +2,7 @@
   "realm": "microservices-realm",
   "enabled": true,
   "displayName": "Realm pour le cours de Microservices",
-  "sslRequired": "external",
+  "sslRequired": "none",
   "registrationAllowed": false,
   "loginWithEmailAllowed": true,
   "duplicateEmailsAllowed": false,
