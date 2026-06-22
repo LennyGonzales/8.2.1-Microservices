@@ -14,11 +14,22 @@
       <p class="subtitle">Consultez les vols disponibles</p>
     </header>
 
+    <section class="auth-section" id="auth-section">
+      <div id="profile" class="profile hidden"></div>
+      <a
+        id="btn-google-login"
+        class="btn-google"
+        href="http://localhost:8080/api/oauth2/authorization/google"
+      >
+        Se connecter avec Google
+      </a>
+    </section>
+
     <div class="actions">
       <button type="button" id="btn-fetch">Récupérer les vols</button>
     </div>
 
-    <div id="result"></div>
+    <div id="flights-result"></div>
   </div>
 
   <script src="app.js"></script>

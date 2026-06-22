@@ -1,19 +1,29 @@
-const API_URL = 'http://localhost:8080/api/vol';
+const API_BASE = 'http://localhost:8080/api';
+const VOL_URL = API_BASE + '/vol';
+const PROFILE_URL = API_BASE + '/profile';
 
 const btnFetch = document.getElementById('btn-fetch');
-const resultEl = document.getElementById('result');
+const flightsResultEl = document.getElementById('flights-result');
+const profileEl = document.getElementById('profile');
+const googleLoginBtn = document.getElementById('btn-google-login');
 
 const priceFormatter = new Intl.NumberFormat('fr-FR', {
   style: 'currency',
   currency: 'EUR'
 });
 
-btnFetch.addEventListener('click', fetchVols);
+const fetchOptions = {
+  credentials: 'include',
+  headers: { Accept: 'application/json' }
+};
 
-function showLoading() {
+btnFetch.addEventListener('click', fetchVols);
+loadProfile();
+
+function showFlightsLoading() {
   btnFetch.disabled = true;
-  resultEl.className = 'loading';
-  resultEl.replaceChildren();
+  flightsResultEl.className = 'loading';
+  flightsResultEl.replaceChildren();
 
   const spinner = document.createElement('div');
   spinner.className = 'spinner';
@@ -21,12 +31,12 @@ function showLoading() {
   const label = document.createElement('span');
   label.textContent = 'Chargement des vols…';
 
-  resultEl.append(spinner, label);
+  flightsResultEl.append(spinner, label);
 }
 
-function showError(title, detail) {
+function showFlightsError(title, detail) {
   btnFetch.disabled = false;
-  resultEl.className = 'error';
+  flightsResultEl.className = 'error';
 
   const heading = document.createElement('strong');
   heading.textContent = title;
@@ -34,7 +44,7 @@ function showError(title, detail) {
   const message = document.createElement('p');
   message.textContent = detail;
 
-  resultEl.replaceChildren(heading, message);
+  flightsResultEl.replaceChildren(heading, message);
 }
 
 function formatDate(value) {
@@ -70,14 +80,14 @@ function createCell(text, className) {
 
 function renderFlights(vols) {
   btnFetch.disabled = false;
-  resultEl.className = '';
-  resultEl.replaceChildren();
+  flightsResultEl.className = '';
+  flightsResultEl.replaceChildren();
 
   if (!vols.length) {
     const empty = document.createElement('p');
     empty.className = 'empty';
     empty.textContent = 'Aucun vol disponible.';
-    resultEl.append(empty);
+    flightsResultEl.append(empty);
     return;
   }
 
@@ -121,26 +131,83 @@ function renderFlights(vols) {
 
   table.append(thead, tbody);
   wrapper.append(summary, table);
-  resultEl.append(wrapper);
+  flightsResultEl.append(wrapper);
+}
+
+function showLoginButton() {
+  googleLoginBtn.classList.remove('hidden');
+  profileEl.classList.add('hidden');
+  profileEl.replaceChildren();
+}
+
+function renderProfile(profile) {
+  const name = profile.name || profile.nom || 'Utilisateur';
+  const email = profile.email || '';
+  const picture = profile.picture || profile.photo || profile.avatar || '';
+
+  profileEl.replaceChildren();
+  profileEl.classList.remove('hidden');
+  googleLoginBtn.classList.add('hidden');
+
+  if (picture) {
+    const avatar = document.createElement('img');
+    avatar.className = 'profile-avatar';
+    avatar.src = picture;
+    avatar.alt = 'Photo de profil';
+    profileEl.append(avatar);
+  }
+
+  const info = document.createElement('div');
+  info.className = 'profile-info';
+
+  const nameEl = document.createElement('p');
+  nameEl.className = 'profile-name';
+  nameEl.textContent = name;
+
+  const emailEl = document.createElement('p');
+  emailEl.className = 'profile-email';
+  emailEl.textContent = email;
+
+  info.append(nameEl, emailEl);
+  profileEl.append(info);
+}
+
+async function loadProfile() {
+  try {
+    const response = await fetch(PROFILE_URL, fetchOptions);
+
+    if (response.status === 401 || response.status === 403) {
+      showLoginButton();
+      return;
+    }
+
+    if (!response.ok) {
+      showLoginButton();
+      return;
+    }
+
+    renderProfile(await response.json());
+  } catch (err) {
+    showLoginButton();
+  }
 }
 
 async function fetchVols() {
-  showLoading();
+  showFlightsLoading();
 
   try {
-    const response = await fetch(API_URL, {
+    const response = await fetch(VOL_URL, {
       method: 'GET',
       headers: { Accept: 'application/json' }
     });
 
     if (!response.ok) {
-      showError('Impossible de récupérer les vols', 'Erreur HTTP ' + response.status);
+      showFlightsError('Impossible de récupérer les vols', 'Erreur HTTP ' + response.status);
       return;
     }
 
-    const data = await response.json();
-    renderFlights(normalizeVols(data));
+    renderFlights(normalizeVols(await response.json()));
   } catch (err) {
-    showError('Connexion impossible', 'Vérifiez que l\'API est démarrée sur le port 8080.');
+    showFlightsError('Connexion impossible', 'Vérifiez que l\'API est démarrée sur le port 8080.');
   }
 }
