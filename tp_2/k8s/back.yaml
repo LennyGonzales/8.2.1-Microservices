@@ -1,0 +1,59 @@
+apiVersion: networking.k8s.io/v1
+kind: Ingress
+metadata:
+  name: back-ingress
+  annotations:
+    kubernetes.io/ingress.class: "traefik"
+spec:
+  rules:
+    - host: back.infres.fr
+      http:
+        paths:
+          - path: /
+            pathType: Prefix
+            backend:
+              service:
+                name: back-service
+                port:
+                  number: 8080
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: back-service
+  labels:
+    run: back
+spec:
+  selector:
+    app: back
+  ports:
+    - protocol: TCP
+      port: 8080
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: back
+  labels:
+    app: back
+spec:
+  replicas: 2
+  selector:
+    matchLabels:
+      app: back
+  template:
+    metadata:
+      labels:
+        app: back
+    spec:
+      containers:
+        - name: back
+          image: registry.infres.fr/back
+          imagePullPolicy: Always
+          ports:
+            - containerPort: 8080
+          env:
+            - name: KEYCLOAK_ISSUER_URI
+              value: http://keycloak.infres.fr/realms/microservices-realm
+            - name: KEYCLOAK_JWK_SET_URI
+              value: http://keycloak-service:8080/realms/microservices-realm/protocol/openid-connect/certs

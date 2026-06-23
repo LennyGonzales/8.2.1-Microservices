@@ -1,0 +1,79 @@
+{
+  "realm": "microservices-realm",
+  "enabled": true,
+  "displayName": "Realm pour le cours de Microservices",
+  "sslRequired": "none",
+  "registrationAllowed": false,
+  "loginWithEmailAllowed": true,
+  "duplicateEmailsAllowed": false,
+  "resetPasswordAllowed": true,
+  "editUsernameAllowed": false,
+  "bruteForceProtected": false,
+
+  "clients": [
+    {
+      "clientId": "rest-api",
+      "name": "REST API (Resource Server)",
+      "enabled": true,
+      "protocol": "openid-connect",
+      "publicClient": false,
+      "bearerOnly": true,
+      "standardFlowEnabled": false,
+      "implicitFlowEnabled": false,
+      "directAccessGrantsEnabled": false,
+      "serviceAccountsEnabled": false,
+      "secret": "6761b88803cdc4538785cd850f367622e6f655bfa1acec0e2ef8086fe36ab005",
+      "defaultClientScopes": ["web-origins", "profile", "roles", "email"],
+      "optionalClientScopes": ["address", "phone", "offline_access"]
+    },
+    {
+      "clientId": "web-app",
+      "name": "Web Application (Frontend)",
+      "enabled": true,
+      "protocol": "openid-connect",
+      "publicClient": true,
+      "bearerOnly": false,
+      "standardFlowEnabled": true,
+      "implicitFlowEnabled": false,
+      "directAccessGrantsEnabled": true,
+      "serviceAccountsEnabled": false,
+      "redirectUris": [
+        "http://localhost:3000/*",
+        "http://front.infres.fr/*"
+      ],
+      "webOrigins": [
+        "http://localhost:3000",
+        "http://front.infres.fr"
+      ],
+      "defaultClientScopes": ["web-origins", "profile", "roles", "email", "openid"],
+      "optionalClientScopes": ["address", "phone", "offline_access"]
+    }
+  ],
+
+  "users": [
+    {
+      "username": "testuser",
+      "email": "testuser@demo.local",
+      "firstName": "Test",
+      "lastName": "User",
+      "enabled": true,
+      "emailVerified": true,
+      "credentials": [
+        {
+          "type": "password",
+          "value": "Test1234!",
+          "temporary": false
+        }
+      ],
+      "realmRoles": ["default-roles-demo-realm"]
+    }
+  ],
+
+  "defaultRoles": ["offline_access", "uma_authorization"],
+
+  "requiredCredentials": ["password"],
+
+  "scopeMappings": [],
+
+  "clientScopeMappings": {}
+}
