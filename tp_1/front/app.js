@@ -6,8 +6,10 @@ let api;
 // Initialisation du client Keycloak JS
 // La librairie keycloak-js est chargée depuis un CDN (ES module)
 // ---------------------------------------------------------------------------
+const cfg = window.__CONFIG__ || {};
+
 const keycloak = new Keycloak({
-  url: 'http://localhost:8180',
+  url: cfg.KEYCLOAK_URL || 'http://localhost:8180',
   realm: 'microservices-realm',
   clientId: 'web-app'
 });

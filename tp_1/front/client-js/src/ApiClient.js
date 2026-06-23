@@ -32,7 +32,14 @@ class ApiClient {
      * Overrides the default value set in spec file if present
      * @param {String} basePath
      */
-    constructor(basePath = 'http://localhost:8080/api') {
+    constructor(basePath) {
+        if (basePath === undefined) {
+            if (typeof window !== 'undefined' && window.__CONFIG__ && window.__CONFIG__.API_URL) {
+                basePath = window.__CONFIG__.API_URL;
+            } else {
+                basePath = 'http://localhost:8080/api';
+            }
+        }
         /**
          * The base URL against which to resolve every API call's (relative) path.
          * @type {String}

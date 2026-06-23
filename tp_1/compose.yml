@@ -1,5 +1,6 @@
 services:
   front:
+    image: registry.infres.fr/front
     build:
       context: ./front
       dockerfile: Dockerfile
@@ -11,6 +12,7 @@ services:
       - tp1-network
 
   back:
+    image: registry.infres.fr/back
     build:
       context: ./back
       dockerfile: Dockerfile
