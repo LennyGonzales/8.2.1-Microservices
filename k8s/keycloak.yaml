@@ -1,0 +1,153 @@
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: keycloak-realm
+data:
+  realm-export.json: |
+    {
+      "realm": "microservices-realm",
+      "enabled": true,
+      "displayName": "Realm pour le cours de Microservices",
+      "sslRequired": "none",
+      "registrationAllowed": false,
+      "loginWithEmailAllowed": true,
+      "duplicateEmailsAllowed": false,
+      "resetPasswordAllowed": true,
+      "editUsernameAllowed": false,
+      "bruteForceProtected": false,
+
+      "clients": [
+        {
+          "clientId": "rest-api",
+          "name": "REST API (Resource Server)",
+          "enabled": true,
+          "protocol": "openid-connect",
+          "publicClient": false,
+          "bearerOnly": true,
+          "standardFlowEnabled": false,
+          "implicitFlowEnabled": false,
+          "directAccessGrantsEnabled": false,
+          "serviceAccountsEnabled": false,
+          "secret": "6761b88803cdc4538785cd850f367622e6f655bfa1acec0e2ef8086fe36ab005",
+          "defaultClientScopes": ["web-origins", "profile", "roles", "email"],
+          "optionalClientScopes": ["address", "phone", "offline_access"]
+        },
+        {
+          "clientId": "web-app",
+          "name": "Web Application (Frontend)",
+          "enabled": true,
+          "protocol": "openid-connect",
+          "publicClient": true,
+          "bearerOnly": false,
+          "standardFlowEnabled": true,
+          "implicitFlowEnabled": false,
+          "directAccessGrantsEnabled": true,
+          "serviceAccountsEnabled": false,
+          "redirectUris": [
+            "http://localhost:3000/*",
+            "http://front.infres.fr.localhost/*"
+          ],
+          "webOrigins": [
+            "http://localhost:3000",
+            "http://front.infres.fr.localhost"
+          ],
+          "defaultClientScopes": ["web-origins", "profile", "roles", "email", "openid"],
+          "optionalClientScopes": ["address", "phone", "offline_access"]
+        }
+      ],
+
+      "users": [
+        {
+          "username": "testuser",
+          "email": "testuser@demo.local",
+          "firstName": "Test",
+          "lastName": "User",
+          "enabled": true,
+          "emailVerified": true,
+          "credentials": [
+            {
+              "type": "password",
+              "value": "Test1234!",
+              "temporary": false
+            }
+          ],
+          "realmRoles": ["default-roles-demo-realm"]
+        }
+      ],
+
+      "defaultRoles": ["offline_access", "uma_authorization"],
+
+      "requiredCredentials": ["password"],
+
+      "scopeMappings": [],
+
+      "clientScopeMappings": {}
+    }
+---
+apiVersion: networking.k8s.io/v1
+kind: Ingress
+metadata:
+  name: keycloak-ingress
+  annotations:
+    kubernetes.io/ingress.class: "traefik"
+spec:
+  rules:
+    - host: keycloak.infres.fr.localhost
+      http:
+        paths:
+          - path: /
+            pathType: Prefix
+            backend:
+              service:
+                name: keycloak-service
+                port:
+                  number: 8080
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: keycloak-service
+  labels:
+    run: keycloak
+spec:
+  selector:
+    app: keycloak
+  ports:
+    - protocol: TCP
+      port: 8080
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: keycloak
+  labels:
+    app: keycloak
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: keycloak
+  template:
+    metadata:
+      labels:
+        app: keycloak
+    spec:
+      containers:
+        - name: keycloak
+          image: quay.io/keycloak/keycloak:latest
+          imagePullPolicy: Always
+          args: ["start-dev", "--import-realm"]
+          env:
+            - name: KEYCLOAK_ADMIN
+              value: admin
+            - name: KEYCLOAK_ADMIN_PASSWORD
+              value: admin
+          ports:
+            - containerPort: 8080
+          volumeMounts:
+            - name: realm-config
+              mountPath: /opt/keycloak/data/import
+      volumes:
+        - name: realm-config
+          configMap:
+            name: keycloak-realm
