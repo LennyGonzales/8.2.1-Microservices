@@ -6,7 +6,7 @@ metadata:
     kubernetes.io/ingress.class: "traefik"
 spec:
   rules:
-    - host: back.infres.fr
+    - host: back.infres.fr.localhost
       http:
         paths:
           - path: /
@@ -49,11 +49,11 @@ spec:
       containers:
         - name: back
           image: registry.infres.fr/back
-          imagePullPolicy: Always
+          imagePullPolicy: IfNotPresent
           ports:
             - containerPort: 8080
           env:
             - name: KEYCLOAK_ISSUER_URI
-              value: http://keycloak.infres.fr/realms/microservices-realm
+              value: http://keycloak.infres.fr.localhost/realms/microservices-realm
             - name: KEYCLOAK_JWK_SET_URI
               value: http://keycloak-service:8080/realms/microservices-realm/protocol/openid-connect/certs

@@ -6,7 +6,7 @@ metadata:
     kubernetes.io/ingress.class: "traefik"
 spec:
   rules:
-    - host: front.infres.fr
+    - host: front.infres.fr.localhost
       http:
         paths:
           - path: /
@@ -18,7 +18,7 @@ spec:
                   number: 80
 ---
 apiVersion: v1
-kind: Service
+kind: Service/
 metadata:
   name: front-service
   labels:
@@ -49,11 +49,11 @@ spec:
       containers:
         - name: front
           image: registry.infres.fr/front
-          imagePullPolicy: Always
+          imagePullPolicy: IfNotPresent
           ports:
             - containerPort: 80
           env:
             - name: API_URL
-              value: http://back.infres.fr/api
+              value: http://back.infres.fr.localhost/api
             - name: KEYCLOAK_URL
-              value: http://keycloak.infres.fr
+              value: http://keycloak.infres.fr.localhost

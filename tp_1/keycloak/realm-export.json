@@ -39,11 +39,11 @@
       "serviceAccountsEnabled": false,
       "redirectUris": [
         "http://localhost:3000/*",
-        "http://front.infres.fr/*"
+        "http://front.infres.fr.localhost/*"
       ],
       "webOrigins": [
         "http://localhost:3000",
-        "http://front.infres.fr"
+        "http://front.infres.fr.localhost"
       ],
       "defaultClientScopes": ["web-origins", "profile", "roles", "email", "openid"],
       "optionalClientScopes": ["address", "phone", "offline_access"]

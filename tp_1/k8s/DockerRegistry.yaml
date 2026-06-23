@@ -6,7 +6,7 @@ metadata:
     kubernetes.io/ingress.class: "traefik"
 spec:
   rules:
-    - host: registry.infres.fr
+    - host: registry.infres.fr.localhost
       http:
         paths:
           - path: /
