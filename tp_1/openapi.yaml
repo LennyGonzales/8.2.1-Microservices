@@ -1,51 +1,11 @@
 openapi: 3.0.3
-
 info:
   title: API Réservation de Vols
   version: 1.0.0
   description: Web service REST de réservation de vols sécurisé par Keycloak (JWT Bearer)
 
 servers:
-  - url: http://localhost:8082
-    description: Gateway Gravitee
   - url: http://localhost:8080/api
-    description: Backend Spring Boot (direct)
-
-tags:
-  - name: Vols
-  - name: Profil
-
-paths:
-  /vol:
-    get:
-      tags: [Vols]
-      summary: Liste des vols disponibles
-      description: Endpoint public.
-      responses:
-        '200':
-          description: Liste des vols
-          content:
-            application/json:
-              schema:
-                type: array
-                items:
-                  $ref: '#/components/schemas/Vol'
-
-  /profil:
-    get:
-      tags: [Profil]
-      summary: Profil utilisateur connecté
-      security:
-        - bearerAuth: []
-      responses:
-        '200':
-          description: Profil
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/Profil'
-        '401':
-          description: Non authentifié
 
 components:
   securitySchemes:
@@ -58,15 +18,64 @@ components:
     Vol:
       type: object
       properties:
-        compagnieAerienne: { type: string, example: Air France }
-        numeroVol: { type: string, example: AF123 }
-        place: { type: string, example: 12A }
-        prix: { type: number, format: double, example: 350.0 }
-        date: { type: string, format: date, example: '2024-07-01' }
+        compagnieAerienne:
+          type: string
+          example: Air France
+        numeroVol:
+          type: string
+          example: AF123
+        place:
+          type: string
+          example: 12A
+        prix:
+          type: number
+          format: double
+          example: 350.0
+        date:
+          type: string
+          format: date
+          example: "2024-07-01"
 
     Profil:
       type: object
       properties:
-        name: { type: string, example: Test User }
-        email: { type: string, example: testuser@demo.local }
-        picture: { type: string, example: '' }
+        name:
+          type: string
+          example: Test User
+        email:
+          type: string
+          example: testuser@demo.local
+        picture:
+          type: string
+          example: ""
+
+paths:
+  /vol:
+    get:
+      summary: Liste des vols disponibles
+      description: Retourne la liste statique des vols. Endpoint public, aucune authentification requise.
+      responses:
+        "200":
+          description: Liste des vols
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/Vol'
+
+  /profil:
+    get:
+      summary: Profil de l'utilisateur connecté
+      description: Retourne les informations de l'utilisateur extraites du JWT Keycloak.
+      security:
+        - bearerAuth: []
+      responses:
+        "200":
+          description: Profil utilisateur
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Profil'
+        "401":
+          description: Token absent ou invalide
