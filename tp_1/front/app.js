@@ -1,4 +1,4 @@
-import Keycloak from '/keycloak.js';
+import Keycloak from 'https://cdn.jsdelivr.net/npm/keycloak-js@26.2.1/+esm';
 
 const API_BASE = 'http://localhost:8080/api';
 const VOL_URL = API_BASE + '/vol';
@@ -6,7 +6,7 @@ const PROFIL_URL = API_BASE + '/profil';
 
 // ---------------------------------------------------------------------------
 // Initialisation du client Keycloak JS
-// Le script keycloak.js est chargé depuis le serveur Keycloak (voir index.html)
+// La librairie keycloak-js est chargée depuis un CDN (ES module)
 // ---------------------------------------------------------------------------
 const keycloak = new Keycloak({
   url: 'http://localhost:8180',
@@ -259,4 +259,3 @@ function renderFlights(vols) {
   wrapper.append(summary, table);
   flightsResultEl.append(wrapper);
 }
-
