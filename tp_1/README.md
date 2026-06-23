@@ -2,7 +2,6 @@
 
 Architecture microservices à trois tiers : frontend statique, API REST Spring Boot, et serveur d'autorisation Keycloak.
 
-
 ## Démarrage rapide
 
 ```bash
@@ -27,7 +26,6 @@ Projet Maven Spring Boot généré avec l'archétype `maven-archetype-webapp`, g
 ```
 /api
 └── /vol          GET → liste des vols disponibles
-    └── /{id}     (extensible par compagnie, numéro, place, date)
 ```
 
 **1c/1d — Ressource `Vol` en JSON**
@@ -38,7 +36,7 @@ Modèle Java (`Vol.java`) exposé en JSON via Jackson :
 record Vol(String compagnieAerienne, String numeroVol, String place, double prix, String date)
 ```
 
-`GET /api/vol` retourne une liste statique de 3 vols (pas de base de données). La consigne demandait initialement du XML/JAXB — on utilise directement JSON (Spring Boot sérialise via Jackson par défaut, ce qui correspond à la demande 1d).
+`GET /api/vol` retourne une liste statique de 3 vols (pas de base de données).
 
 ---
 
@@ -46,8 +44,7 @@ record Vol(String compagnieAerienne, String numeroVol, String place, double prix
 
 Frontend HTML/JS vanilla servi par nginx (port 3000).
 
-- Bouton "Récupérer les vols" → `GET /api/vol` → affichage en tableau (compagnie, n° vol, place, date, prix)
-- Section profil : affiche le nom et l'email de l'utilisateur connecté
+- Bouton "Récupérer les vols" -> `GET /api/vol` : affichage en tableau (compagnie, numéro de vol, place, date, prix)
 - Aucun framework, aucune dépendance npm côté frontend applicatif
 
 ---
@@ -62,18 +59,6 @@ Un projet Google Cloud a été créé, l'API Google+ activée, et des credential
 
 Dépendance `spring-boot-starter-oauth2-client`. Spring Security gère automatiquement le flow Authorization Code. Le profil était récupéré depuis l'objet `OidcUser` (claims Google : `name`, `email`, `picture`) et renvoyé par `GET /api/profil`.
 
-**Migration vers Keycloak (tâches 4 & 5)**
-
-Google a été **remplacé intégralement par Keycloak** (auto-hébergé, gestion interne des utilisateurs). Voir le tableau de migration ci-dessous.
-
-| Élément | Avant (Google) | Après (Keycloak) |
-|---|---|---|
-| Dépendance Maven | `oauth2-client` | `oauth2-resource-server` |
-| Mode session backend | Stateful (session HTTP) | Stateless (JWT Bearer) |
-| Principal Spring | `OidcUser` | `Jwt` |
-| Auth frontend | Lien redirect Google | `keycloak-js` (Authorization Code + PKCE) |
-| Config `application.yml` | `clientId` / `clientSecret` Google | `issuer-uri` Keycloak |
-
 ---
 
 ### Tâche 4 — Sécurisation de l'API REST via Keycloak (Resource Server)
@@ -85,6 +70,7 @@ Keycloak tourne en Docker (`quay.io/keycloak/keycloak:latest`, mode dev). Il imp
 **4b — Client `rest-api` (bearer-only)**
 
 Déclaré dans `keycloak/realm-export.json` :
+
 - Type : confidentiel, `bearerOnly: true`
 - Tous les flows désactivés (pas de login direct, uniquement validation de tokens)
 
@@ -93,25 +79,26 @@ Déclaré dans `keycloak/realm-export.json` :
 Dépendance Maven : `spring-boot-starter-oauth2-resource-server` (standard Spring Security, pas d'adapter Keycloak propriétaire — les adapters Keycloak sont dépréciés).
 
 `application.yml` :
+
 ```yaml
 spring.security.oauth2.resourceserver.jwt.issuer-uri:
   ${KEYCLOAK_ISSUER_URI:http://localhost:8180/realms/microservices-realm}
 ```
 
 `SecurityConfig.java` :
+
 - Session `STATELESS`
 - `oauth2ResourceServer(jwt -> {})` : chaque requête doit porter un Bearer JWT valide signé par Keycloak
 - CSRF désactivé
 - CORS : origine `http://localhost:3000` autorisée
 
-`ProfilController.java` : `@AuthenticationPrincipal Jwt` → claims `name`, `preferred_username`, `email`.
+`ProfilController.java` : `@AuthenticationPrincipal Jwt` -> claims `name`, `preferred_username`, `email`.
 
 **4d — Validation**
 
 ```bash
-curl -i http://localhost:8080/api/profil                              # → 401 sans token
-curl -H "Authorization: Bearer <token>" http://localhost:8080/api/profil  # → 200
-curl http://localhost:8080/api/vol                                    # → 200 (public)
+curl -i http://localhost:8080/api/profil                                  # 401 sans token
+curl -H "Authorization: Bearer <token>" http://localhost:8080/api/profil  # 200
 ```
 
 ---
@@ -121,6 +108,7 @@ curl http://localhost:8080/api/vol                                    # → 200 
 **5a — Client `web-app` (public)**
 
 Déclaré dans `keycloak/realm-export.json` :
+
 - Type : public (PKCE obligatoire, pas de secret côté client)
 - `standardFlowEnabled: true` (Authorization Code Flow)
 - `redirectUris: ["http://localhost:3000/*"]`
@@ -137,9 +125,20 @@ const keycloak = new Keycloak({
 keycloak.init({ onLoad: 'check-sso', pkceMethod: 'S256' });
 ```
 
-- Clic "Se connecter" → `keycloak.login()` → redirection Keycloak → retour avec code d'autorisation → échange contre un **JWT access token**
-- `keycloak.tokenParsed` contient les claims JWT décodés (sub, name, email…) — ID utilisateur visible directement
-- Appels à `/api/profil` → header `Authorization: Bearer <access_token>` (refresh auto si expiry < 30s)
+- Bouton "Se connecter" -> `keycloak.login()` -> redirection Keycloak -> retour avec code d'autorisation -> échange contre un **JWT access token**
+- `keycloak.tokenParsed` contient les claims JWT décodés (sub, name, email…), ID utilisateur visible directement
+- Appels à `/api/profil` -> header `Authorization: Bearer <access_token>` (refresh auto si expiry < 30s)
+
+**Récapitulatif de la migration vers Keycloak**
+
+
+| Élément               | Avant (Google)                     | Après (Keycloak)                         |
+| ----------------------- | ---------------------------------- | ----------------------------------------- |
+| Dépendance Maven       | `oauth2-client`                    | `oauth2-resource-server`                  |
+| Mode session backend    | Stateful (session HTTP)            | Stateless (JWT Bearer)                    |
+| Principal Spring        | `OidcUser`                         | `Jwt`                                     |
+| Auth frontend           | Lien redirect Google               | `keycloak-js` (Authorization Code + PKCE) |
+| Config`application.yml` | `clientId` / `clientSecret` Google | `issuer-uri` Keycloak                     |
 
 ---
 
@@ -147,20 +146,14 @@ keycloak.init({ onLoad: 'check-sso', pkceMethod: 'S256' });
 
 **6a — Récupération du token**
 
-Après connexion, le token est accessible dans la console navigateur :
-```js
-// Dans la console du navigateur (après connexion)
-keycloak.token        // access token brut (JWT)
-keycloak.tokenParsed  // claims décodés (objet JS)
-```
-
-Ou via les DevTools → Onglet Réseau → requête vers `http://localhost:8180/realms/microservices-realm/protocol/openid-connect/token` → champ `access_token` dans la réponse JSON.
+Après connexion, le token est accessible via les DevTools -> Onglet Réseau/Network -> requête vers `http://localhost:8180/realms/microservices-realm/protocol/openid-connect/token` -> champ `access_token` dans la réponse JSON.
 
 **6b — Décodage sur jwt.io**
 
 En collant le token sur [https://jwt.io](https://jwt.io), on observe :
 
-- **Header** : 
+- **Header** :
+
 ```json
 {
   "alg": "RS256",
@@ -168,7 +161,9 @@ En collant le token sur [https://jwt.io](https://jwt.io), on observe :
   "kid": "jZBuyprLsyqxK16QQo4iqlsg45OJ7C62miui-rdEdsE"
 }
 ```
+
 - **Payload**:
+
 ```json
 {
   "exp": 1782139759,
@@ -195,6 +190,7 @@ En collant le token sur [https://jwt.io](https://jwt.io), on observe :
   "email": "testuser@demo.local"
 }
 ```
+
 - **Signature** : vérifiable avec la clé publique du realm (`http://localhost:8180/realms/microservices-realm`)
 
 ---
@@ -207,13 +203,8 @@ Le contrat OpenAPI 3.0 de l'API est défini dans [openapi.yaml](openapi.yaml)
 
 **7b — Génération depuis le contrat**
 
-Depuis [https://editor.swagger.io](https://editor.swagger.io) après avoir collé le contrat :
+Nous pouvons générer la documentation HTML et les librairies clientes via la CLI `openapi-generator` :
 
-- **Documentation HTML** : `Generate Client → html2` ou `Generate Server → html`
-- **Client JavaScript** : `Generate Client → javascript`
-- **Client Java** : `Generate Client → java`
-
-Ou via la CLI `openapi-generator` :
 ```bash
 # Documentation HTML
 openapi-generator generate -i openapi.yaml -g html2 -o ./docs
@@ -226,12 +217,12 @@ openapi-generator generate -i openapi.yaml -g javascript -o ./client-js
 
 ## Keycloak — Realm `microservices-realm`
 
-| Élément | Valeur |
-|---|---|
-| Realm | `microservices-realm` |
-| Client API | `rest-api` (bearer-only, confidentiel) |
-| Client Web | `web-app` (public, Authorization Code + PKCE) |
-| Utilisateur test | `testuser` / `Test1234!` |
+
+| Élément        | Valeur                                        |
+| ---------------- | --------------------------------------------- |
+| Realm            | `microservices-realm`                         |
+| Client API       | `rest-api` (bearer-only, confidentiel)        |
+| Client Web       | `web-app` (public, Authorization Code + PKCE) |
+| Utilisateur test | `testuser` / `Test1234!`                      |
 
 Console d'administration : [http://localhost:8180/admin](http://localhost:8180/admin)
-
