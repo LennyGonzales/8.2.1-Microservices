@@ -2,6 +2,39 @@
 
 Architecture microservices à trois tiers : frontend statique, API REST Spring Boot, et serveur d'autorisation Keycloak.
 
+## Problèmes rencontrées
+
+### 1. Front - Back - Erreur CORS
+
+Nous avons rencontré un problème de CORS (Cross-Origin Resource Sharing) en liant le front avec le back.
+Pour résoudre ce problème, nous avons ajouté :
+```java
+public class SecurityConfig {
+    ...
+
+    @Bean
+    public CorsConfigurationSource corsConfigurationSource() {
+        CorsConfiguration configuration = new CorsConfiguration();
+        configuration.setAllowedOrigins(List.of(
+            "http://localhost:3000",
+            "http://front.infres.fr.localhost"
+        ));
+        configuration.setAllowedMethods(List.of("GET", "POST", "PUT", "DELETE", "OPTIONS"));
+        configuration.setAllowedHeaders(List.of("*"));
+        configuration.setAllowCredentials(false);
+        UrlBasedCorsConfigurationSource source = new UrlBasedCorsConfigurationSource();
+        source.registerCorsConfiguration("/**", configuration);
+        return source;
+    }
+}
+```
+
+### 2. K3s - Front - Keycloak - Web crypto
+
+Nous avons rencontré un problème pour la liaison entre le front et keycloak en utilisant k3s.
+En effet, l'API Web crypto ne fonctionne qu'avec HTTPS, localhost ou le domaine .localhost.
+Ainsi, par simplicité, nous avons choisit de modifié le domaine *.infres.fr vers *.infres.fr.localhost.
+
 ## Démarrage rapide
 
 ```bash
