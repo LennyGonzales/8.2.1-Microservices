@@ -8,6 +8,7 @@ Architecture microservices à trois tiers : frontend statique, API REST Spring B
 
 Nous avons rencontré un problème de CORS (Cross-Origin Resource Sharing) en liant le front avec le back.
 Pour résoudre ce problème, nous avons ajouté :
+
 ```java
 public class SecurityConfig {
     ...
@@ -33,7 +34,7 @@ public class SecurityConfig {
 
 Nous avons rencontré un problème pour la liaison entre le front et keycloak en utilisant k3s.
 En effet, l'API Web crypto ne fonctionne qu'avec HTTPS, localhost ou le domaine .localhost.
-Ainsi, par simplicité, nous avons choisit de modifié le domaine *.infres.fr vers *.infres.fr.localhost.
+Ainsi, par simplicité, nous avons choisit de modifié le domaine \*.infres.fr vers \*.infres.fr.localhost.
 
 ## Démarrage rapide
 
@@ -54,14 +55,14 @@ Le backend attend que Keycloak soit `healthy` avant de démarrer (`depends_on: c
 
 Projet Maven Spring Boot généré avec l'archétype `maven-archetype-webapp`, groupId `infres.ws.rest`, artifactId `java-rest-server`.
 
-**1b — Hiérarchie de ressources REST**
+#### 1b — Hiérarchie de ressources REST
 
-```
+```bash
 /api
 └── /vol          GET → liste des vols disponibles
 ```
 
-**1c/1d — Ressource `Vol` en JSON**
+#### 1c/1d — Ressource `Vol` en JSON
 
 Modèle Java (`Vol.java`) exposé en JSON via Jackson :
 
@@ -84,11 +85,11 @@ Frontend HTML/JS vanilla servi par nginx (port 3000).
 
 ### Tâche 3 — Délégation OAuth 2.0 auprès de Google (remplacé par Keycloak)
 
-**3a — Inscription auprès de Google**
+#### 3a — Inscription auprès de Google
 
 Un projet Google Cloud a été créé, l'API Google+ activée, et des credentials OAuth 2.0 récupérés (`client_id` + `client_secret`). L'URL de redirection `http://localhost:8080/api/login/oauth2/code/google` a été déclarée.
 
-**3b/3c — Intégration Spring Security OAuth2 Client**
+#### 3b/3c — Intégration Spring Security OAuth2 Client
 
 Dépendance `spring-boot-starter-oauth2-client`. Spring Security gère automatiquement le flow Authorization Code. Le profil était récupéré depuis l'objet `OidcUser` (claims Google : `name`, `email`, `picture`) et renvoyé par `GET /api/profil`.
 
@@ -96,7 +97,7 @@ Dépendance `spring-boot-starter-oauth2-client`. Spring Security gère automatiq
 
 ### Tâche 4 — Sécurisation de l'API REST via Keycloak (Resource Server)
 
-**4a — Installation Keycloak**
+#### 4a — Installation Keycloak
 
 Keycloak tourne en Docker (`quay.io/keycloak/keycloak:latest`, mode dev). Il importe automatiquement le realm au démarrage via `--import-realm` et le volume `./keycloak:/opt/keycloak/data/import`.
 
@@ -107,7 +108,7 @@ Déclaré dans `keycloak/realm-export.json` :
 - Type : confidentiel, `bearerOnly: true`
 - Tous les flows désactivés (pas de login direct, uniquement validation de tokens)
 
-**4c — Configuration du backend comme Resource Server**
+#### 4c — Configuration du backend comme Resource Server
 
 Dépendance Maven : `spring-boot-starter-oauth2-resource-server` (standard Spring Security, pas d'adapter Keycloak propriétaire — les adapters Keycloak sont dépréciés).
 
@@ -127,7 +128,7 @@ spring.security.oauth2.resourceserver.jwt.issuer-uri:
 
 `ProfilController.java` : `@AuthenticationPrincipal Jwt` -> claims `name`, `preferred_username`, `email`.
 
-**4d — Validation**
+#### 4d — Validation
 
 ```bash
 curl -i http://localhost:8080/api/profil                                  # 401 sans token
@@ -147,7 +148,7 @@ Déclaré dans `keycloak/realm-export.json` :
 - `redirectUris: ["http://localhost:3000/*"]`
 - `webOrigins: ["http://localhost:3000"]`
 
-**5c — Flow d'authentification et récupération du JWT**
+#### 5c — Flow d'authentification et récupération du JWT
 
 ```js
 const keycloak = new Keycloak({
@@ -162,26 +163,25 @@ keycloak.init({ onLoad: 'check-sso', pkceMethod: 'S256' });
 - `keycloak.tokenParsed` contient les claims JWT décodés (sub, name, email…), ID utilisateur visible directement
 - Appels à `/api/profil` -> header `Authorization: Bearer <access_token>` (refresh auto si expiry < 30s)
 
-**Récapitulatif de la migration vers Keycloak**
+#### Récapitulatif de la migration vers Keycloak
 
-
-| Élément               | Avant (Google)                     | Après (Keycloak)                         |
-| ----------------------- | ---------------------------------- | ----------------------------------------- |
-| Dépendance Maven       | `oauth2-client`                    | `oauth2-resource-server`                  |
-| Mode session backend    | Stateful (session HTTP)            | Stateless (JWT Bearer)                    |
-| Principal Spring        | `OidcUser`                         | `Jwt`                                     |
-| Auth frontend           | Lien redirect Google               | `keycloak-js` (Authorization Code + PKCE) |
-| Config`application.yml` | `clientId` / `clientSecret` Google | `issuer-uri` Keycloak                     |
+| Élément                 | Avant (Google)                     | Après (Keycloak)                         |
+| ----------------------- | ---------------------------------- | ---------------------------------------  |
+| Dépendance Maven        | `oauth2-client`                    | `oauth2-resource-server`                 |
+| Mode session backend    | Stateful (session HTTP)            | Stateless (JWT Bearer)                   |
+| Principal Spring        | `OidcUser`                         | `Jwt`                                    |
+| Auth frontend           | Lien redirect Google               | `keycloak-js` (Authorization Code + PKCE)|
+| Config`application.yml` | `clientId` / `clientSecret` Google | `issuer-uri` Keycloak                    |
 
 ---
 
 ### Tâche 6 — Analyse du token JWT Keycloak
 
-**6a — Récupération du token**
+#### 6a — Récupération du token
 
 Après connexion, le token est accessible via les DevTools -> Onglet Réseau/Network -> requête vers `http://localhost:8180/realms/microservices-realm/protocol/openid-connect/token` -> champ `access_token` dans la réponse JSON.
 
-**6b — Décodage sur jwt.io**
+#### 6b — Décodage sur jwt.io
 
 En collant le token sur [https://jwt.io](https://jwt.io), on observe :
 
@@ -230,11 +230,11 @@ En collant le token sur [https://jwt.io](https://jwt.io), on observe :
 
 ### Tâche 7 — Contrat d'API OpenAPI / Swagger
 
-**7a — Définition du contrat**
+#### 7a — Définition du contrat
 
 Le contrat OpenAPI 3.0 de l'API est défini dans [openapi.yaml](openapi.yaml)
 
-**7b — Génération depuis le contrat**
+#### 7b — Génération depuis le contrat
 
 Nous pouvons générer la documentation HTML et les librairies clientes via l'image Docker officielle `openapitools/openapi-generator-cli` :
 
@@ -256,8 +256,7 @@ Ouvrir ensuite `./docs/index.html` dans le navigateur.
 
 ## Keycloak — Realm `microservices-realm`
 
-
-| Élément        | Valeur                                        |
+| Élément          | Valeur                                        |
 | ---------------- | --------------------------------------------- |
 | Realm            | `microservices-realm`                         |
 | Client API       | `rest-api` (bearer-only, confidentiel)        |
@@ -313,12 +312,12 @@ kubectl get hpa
 
 ### 6. Accès aux services
 
-| Service   | URL                                                |
-|-----------|----------------------------------------------------|
-| Frontend  | http://front.infres.fr.localhost                   |
-| API REST  | http://back.infres.fr.localhost/api                |
-| Keycloak  | http://keycloak.infres.fr.localhost                |
-| Registry  | http://registry.infres.fr.localhost/v2/_catalog    |
+| Service   | URL                                                  |
+|-----------|------------------------------------------------------|
+| Frontend  | <http://front.infres.fr.localhost>                   |
+| API REST  | <http://back.infres.fr.localhost/api>                |
+| Keycloak  | <http://keycloak.infres.fr.localhost>                |
+| Registry  | <http://registry.infres.fr.localhost/v2/_catalog>    |
 
 **Admin Keycloak** : `admin` / `admin`
 **Compte de test** : `testuser` / `Test1234!`
