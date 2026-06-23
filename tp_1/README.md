@@ -243,20 +243,20 @@ Console d'administration : [http://localhost:8180/admin](http://localhost:8180/a
 echo "$(hostname -I | awk '{print $1}') registry.infres.fr back.infres.fr front.infres.fr keycloak.infres.fr" | sudo tee -a /etc/hosts
 ```
 
-### 3. Configuration du registry Docker
+### 2. Configuration du registry Docker
 
 **k3s** (`/etc/rancher/k3s/registries.yaml`) :
 ```yaml
 mirrors:
   registry.infres.fr:
     endpoint:
-      - "http://registry.infres.fr"
+      - "http://registry.infres.fr.localhost"
 ```
 
 **Docker local** (`/etc/docker/daemon.json`) :
 ```json
 {
-  "insecure-registries": ["registry.infres.fr"]
+  "insecure-registries": ["registry.infres.fr.localhost"]
 }
 ```
 
@@ -267,22 +267,22 @@ sudo systemctl restart docker
 export KUBECONFIG="/etc/rancher/k3s/k3s.yaml"
 ```
 
-### 4. Déploiement du registry Docker
+### 3. Déploiement du registry Docker
 
 ```bash
 kubectl apply -f k8s/DockerRegistry.yaml
 kubectl get pods -l app=docker-registry
 ```
 
-### 5. Build et import des images
+### 4. Build et import des images
 
 ```bash
 docker compose build
-docker save registry.infres.fr/back  | sudo k3s ctr images import -
-docker save registry.infres.fr/front | sudo k3s ctr images import -
+docker save registry.infres.fr.localhost/back  | sudo k3s ctr images import -
+docker save registry.infres.fr.localhost/front | sudo k3s ctr images import -
 ```
 
-### 6. Déploiement des services
+### 5. Déploiement des services
 
 ```bash
 kubectl apply -f k8s/keycloak.yaml
@@ -293,7 +293,7 @@ kubectl apply -f k8s/front-hpa.yaml
 kubectl apply -f k8s/keycloak-hpa.yaml
 ```
 
-### 7. Vérification
+### 6. Vérification
 
 ```bash
 kubectl get pods
@@ -302,25 +302,19 @@ kubectl get ingress
 kubectl get hpa
 ```
 
-### 8. Accès aux services
+### 7. Accès aux services
 
-| Service   | URL                                      |
-|-----------|------------------------------------------|
-| Frontend  | http://front.infres.fr                   |
-| API REST  | http://back.infres.fr/api                |
-| Keycloak  | http://keycloak.infres.fr                |
-| Registry  | http://registry.infres.fr/v2/_catalog    |
+| Service   | URL                                                |
+|-----------|----------------------------------------------------|
+| Frontend  | http://front.infres.fr.localhost                   |
+| API REST  | http://back.infres.fr.localhost/api                |
+| Keycloak  | http://keycloak.infres.fr.localhost                |
+| Registry  | http://registry.infres.fr/.localhostv2/_catalog    |
 
-**Identifiants administrateur Keycloak** : `admin` / `admin`
+**Admin Keycloak** : `admin` / `admin`
 **Compte de test** : `testuser` / `Test1234!`
 
-> **Note Web Crypto** : Sécurisé par PKCE (S256), le frontend nécessite que le navigateur dispose de `crypto.subtle` — disponible uniquement en contexte sécurisé (HTTPS ou `localhost`). Si l'accès se fait via l'ingress en HTTP sur `front.infres.fr`, utiliser un port-forward pour tester côté navigateur :
-> ```bash
-> kubectl port-forward service/front-service 3000:80
-> ```
-> Puis ouvrir `http://localhost:3000`.
-
-### 9. Nettoyage
+### 8. Nettoyage
 
 ```bash
 kubectl delete -f k8s/
