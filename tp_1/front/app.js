@@ -1,8 +1,6 @@
 import Keycloak from 'https://cdn.jsdelivr.net/npm/keycloak-js@26.2.1/+esm';
 
-const API_BASE = 'http://localhost:8080/api';
-const VOL_URL = API_BASE + '/vol';
-const PROFIL_URL = API_BASE + '/profil';
+let api;
 
 // ---------------------------------------------------------------------------
 // Initialisation du client Keycloak JS
@@ -22,6 +20,9 @@ const flightsResultEl   = document.getElementById('flights-result');
 const profileEl         = document.getElementById('profile');
 const btnLogin          = document.getElementById('btn-keycloak-login');
 const btnLogout         = document.getElementById('btn-keycloak-logout');
+
+// Visible par défaut ; masqué si session Keycloak active
+showLoginButton();
 
 const priceFormatter = new Intl.NumberFormat('fr-FR', {
   style: 'currency',
@@ -111,43 +112,44 @@ function renderProfile(claims) {
 // ---------------------------------------------------------------------------
 
 /**
- * Retourne un header Authorization avec le Bearer token Keycloak.
- * Rafraîchit automatiquement le token s'il expire dans moins de 30 secondes.
+ * Met à jour le token JWT dans le client OpenAPI généré.
  */
-async function getAuthHeaders() {
+async function getApi() {
+  if (!api) {
+    const { default: DefaultApi } = await import('./client-js/src/api/DefaultApi.js');
+    api = new DefaultApi();
+  }
+  return api;
+}
+
+async function syncToken() {
   if (!keycloak.authenticated) {
-    return {};
+    return false;
   }
   try {
-    await keycloak.updateToken(30);
+    if (keycloak.isTokenExpired(30)) {
+      await keycloak.updateToken(30);
+    }
   } catch {
-    // Token expiré et refresh impossible → forcer reconnexion
     await keycloak.login();
-    return {};
+    return false;
   }
-
-  return {
-    'Authorization': 'Bearer ' + keycloak.token,
-    'Accept': 'application/json'
-  };
+  return true;
 }
 
 async function fetchVols() {
   showFlightsLoading();
+  if (!await syncToken()) {
+    showFlightsError('Non connecté', 'Connectez-vous avec Keycloak.');
+    return;
+  }
+
   try {
-    const response = await fetch(VOL_URL, {
-      method: 'GET',
-      headers: await getAuthHeaders()
-    });
-
-    if (!response.ok) {
-      showFlightsError('Impossible de récupérer les vols', 'Erreur HTTP ' + response.status);
-      return;
-    }
-
-    renderFlights(normalizeVols(await response.json()));
+    const client = await getApi();
+    client.apiClient.authentications.bearerAuth.accessToken = keycloak.token;
+    renderFlights(normalizeVols(await client.getVols()));
   } catch (err) {
-    showFlightsError('Connexion impossible', 'Vérifiez que l\'API est démarrée sur le port 8080.');
+    showFlightsError('Impossible de récupérer les vols', err.message);
   }
 }
 

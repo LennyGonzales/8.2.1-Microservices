@@ -203,15 +203,21 @@ Le contrat OpenAPI 3.0 de l'API est défini dans [openapi.yaml](openapi.yaml)
 
 **7b — Génération depuis le contrat**
 
-Nous pouvons générer la documentation HTML et les librairies clientes via la CLI `openapi-generator` :
+Nous pouvons générer la documentation HTML et les librairies clientes via l'image Docker officielle `openapitools/openapi-generator-cli` :
 
 ```bash
 # Documentation HTML
-openapi-generator generate -i openapi.yaml -g html2 -o ./docs
+docker run --rm -v "${PWD}:/local" openapitools/openapi-generator-cli generate -i /local/openapi.yaml -g html2 -o /local/docs
 
-# Client JavaScript
-openapi-generator generate -i openapi.yaml -g javascript -o ./client-js
+# Client JavaScript (utilisé par le front)
+docker run --rm -v "${PWD}:/local" openapitools/openapi-generator-cli generate \
+  -i /local/openapi.yaml -g javascript -o /local/front/client-js \
+  --additional-properties=usePromises=true,projectName=vols-api
 ```
+
+Le front appelle l'API via `DefaultApi` (`front/client-js/src/api/DefaultApi.js`) : `getVols()` et `getProfil()`.
+
+Ouvrir ensuite `./docs/index.html` dans le navigateur.
 
 ---
 

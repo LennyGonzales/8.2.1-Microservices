@@ -18,7 +18,7 @@
       <div id="profile" class="profile hidden"></div>
       <button
         id="btn-keycloak-login"
-        class="btn-google hidden"
+        class="btn-google"
         type="button"
       >
         Se connecter avec Keycloak
@@ -39,7 +39,13 @@
     <div id="flights-result"></div>
   </div>
 
-  <!-- app.js est un ES module et importe keycloak-js depuis un CDN -->
+  <script type="importmap">
+  {
+    "imports": {
+      "superagent": "https://cdn.jsdelivr.net/npm/superagent@5.3.1/+esm"
+    }
+  }
+  </script>
   <script type="module" src="app.js"></script>
 </body>
 </html>
